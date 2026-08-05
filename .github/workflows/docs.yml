@@ -1,0 +1,32 @@
+name: Sync docs to ReadMe
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs-site/**", ".github/workflows/docs.yml"]
+  pull_request:
+    paths: ["docs-site/**", ".github/workflows/docs.yml"]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Validates frontmatter and reports create-vs-update per page without
+      # writing anything. Runs on every event so a bad `category.uri` or a
+      # dangling `parent.uri` surfaces in review, not in production.
+      - name: Validate
+        run: npx rdme@10 docs upload ./docs-site/guides --key "$README_API_KEY" --dry-run
+        env:
+          README_API_KEY: ${{ secrets.README_API_KEY }}
+
+      - name: Upload
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: npx rdme@10 docs upload ./docs-site/guides --key "$README_API_KEY"
+        env:
+          README_API_KEY: ${{ secrets.README_API_KEY }}

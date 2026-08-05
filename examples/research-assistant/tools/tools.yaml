@@ -1,0 +1,27 @@
+tools:
+  # A tool the author implements. On LangGraph the dotted path is imported
+  # directly; on Claude Code it can only be named (BRIDGE103), because the
+  # engine cannot import a Python callable.
+  - name: web-search
+    description: Search the web and return titled, dated, linked results.
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: What to search for.
+        limit:
+          type: integer
+          description: Maximum number of results.
+      required: [query]
+    implementation: research_assistant_impl.tools:web_search
+
+  # Builtins: native on Claude Code, served by agentbridge.runtime.builtins
+  # on LangGraph so the workflow actually runs on both.
+  - name: read-file
+    description: Read a text file from the local filesystem.
+    builtin: Read
+
+  - name: write-file
+    description: Write a text file to the local filesystem.
+    builtin: Write

@@ -1,0 +1,72 @@
+name: research-assistant
+description: >-
+  Researches a topic, loops until the sources are good enough, then writes a
+  cited brief.
+version: 0.1.0
+
+# Declaring `graph` is what makes the LangGraph target meaningful. Drop this
+# section and the same spec still compiles — but LangGraph collapses to a
+# single node (BRIDGE200), because "the model decides" is not a graph.
+mode: graph
+
+model:
+  name: claude-opus-5
+  max_tokens: 16000
+  effort: high
+
+state:
+  name: ResearchState
+  fields:
+    - name: messages
+      type: messages
+      reducer: append
+      description: The running transcript.
+    - name: topic
+      type: str
+      description: What the user asked about.
+    - name: findings
+      type: list
+      reducer: append
+      description: Source snippets gathered so far.
+    - name: rounds
+      type: int
+      description: How many research passes have run.
+
+graph:
+  entry: plan
+
+  nodes:
+    - name: plan
+      agent: planner
+      description: Turn the request into a set of research questions.
+    - name: research
+      agent: researcher
+      description: Gather sources for the open questions.
+    # A plain function rather than an agent. Bookkeeping the loop depends on
+    # should not be a model's job — if the counter that bounds the loop is
+    # only a prompt instruction, the loop is unbounded in practice.
+    - name: tally
+      function: research_assistant_impl.routing:record_round
+      description: Count the research pass that just finished.
+    - name: write
+      agent: writer
+      description: Produce the final cited brief.
+
+  edges:
+    - from: plan
+      to: research
+    - from: research
+      to: tally
+    - from: write
+      to: END
+
+  branches:
+    - from: tally
+      condition: research_assistant_impl.routing:needs_more_research
+      description: >-
+        If fewer than three distinct sources have been gathered and this is
+        under the third research pass, go back and research again; otherwise
+        hand off to the writer.
+      targets:
+        more: research
+        done: write

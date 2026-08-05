@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets — never commit. .env holds README_API_KEY.
+.env
+.env.*
+!.env.example
